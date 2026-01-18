@@ -133,13 +133,6 @@ jobs:
       - name: Wait for database
         run: sleep 10
 
-      - name: Initialize MediaWiki
-        working-directory: /var/www/html
-        run: |
-          # Run the labki-platform initialization
-          /opt/labki/scripts/wait-for-db.sh
-          /opt/labki/scripts/install-mediawiki.sh
-
       - name: PHPUnit unit tests
         working-directory: /var/www/html
         run: |
