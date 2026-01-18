@@ -53,27 +53,9 @@
               position: 'relative',
               padding: '12px 14px',
               paddingLeft: packStatuses[pack.name] ? '20px' : '14px',
-              background:
-                packStatuses[pack.name] === 'running'
-                  ? 'linear-gradient(135deg, #f0f5ff 0%, #ffffff 100%)'
-                  : packStatuses[pack.name] === 'complete'
-                    ? 'linear-gradient(135deg, #f0fdf4 0%, #ffffff 100%)'
-                    : packStatuses[pack.name] === 'failed'
-                      ? 'linear-gradient(135deg, #fff5f5 0%, #ffffff 100%)'
-                      : packStatuses[pack.name] === 'pending'
-                        ? '#fafbfc'
-                        : 'white',
+              background: getPackCardBackground(packStatuses[pack.name]),
               border: '2px solid #eaecf0',
-              borderLeft:
-                packStatuses[pack.name] === 'running'
-                  ? '4px solid #3366cc'
-                  : packStatuses[pack.name] === 'complete'
-                    ? '4px solid #14866d'
-                    : packStatuses[pack.name] === 'failed'
-                      ? '4px solid #d33'
-                      : packStatuses[pack.name] === 'pending'
-                        ? '4px solid #c8ccd1'
-                        : '2px solid #eaecf0',
+              borderLeft: getPackCardBorderLeft(packStatuses[pack.name]),
               borderRadius: '10px',
               boxShadow: '0 2px 6px rgba(0, 0, 0, 0.08)',
               marginBottom: '10px',
@@ -171,30 +153,9 @@
                         textTransform: 'uppercase',
                         letterSpacing: '0.3px',
                         whiteSpace: 'nowrap',
-                        background:
-                          pack.state.action === 'install'
-                            ? 'linear-gradient(135deg, #d5fdf0 0%, #e8fff8 100%)'
-                            : pack.state.action === 'update'
-                              ? 'linear-gradient(135deg, #fff4e5 0%, #fff8ed 100%)'
-                              : pack.state.action === 'remove'
-                                ? 'linear-gradient(135deg, #fee7e6 0%, #fff0ef 100%)'
-                                : '#f8f9fa',
-                        color:
-                          pack.state.action === 'install'
-                            ? '#14866d'
-                            : pack.state.action === 'update'
-                              ? '#ac6600'
-                              : pack.state.action === 'remove'
-                                ? '#d33'
-                                : '#54595d',
-                        border:
-                          pack.state.action === 'install'
-                            ? '1px solid #7fd4bf'
-                            : pack.state.action === 'update'
-                              ? '1px solid #f0c77e'
-                              : pack.state.action === 'remove'
-                                ? '1px solid #faa'
-                                : '1px solid #c8ccd1',
+                        background: getActionBadgeBackground(pack.state.action),
+                        color: getActionBadgeColor(pack.state.action),
+                        border: getActionBadgeBorder(pack.state.action),
                       }"
                     >
                       {{ getActionIcon(pack.state.action) }} {{ pack.state.action }}
@@ -217,14 +178,7 @@
                   fontWeight: '700',
                   whiteSpace: 'nowrap',
                   flexShrink: '0',
-                  background:
-                    packStatuses[pack.name] === 'pending'
-                      ? 'linear-gradient(135deg, #f8f9fa 0%, #eaecf0 100%)'
-                      : packStatuses[pack.name] === 'running'
-                        ? 'linear-gradient(135deg, #3366cc 0%, #447ff5 100%)'
-                        : packStatuses[pack.name] === 'complete'
-                          ? 'linear-gradient(135deg, #14866d 0%, #00af89 100%)'
-                          : 'linear-gradient(135deg, #d33 0%, #ff4444 100%)',
+                  background: getOperationStatusBackground(packStatuses[pack.name]),
                   color: packStatuses[pack.name] === 'pending' ? '#54595d' : 'white',
                   boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
                   animation:
@@ -773,13 +727,7 @@ function updatePackStatusFromMessage(message: string) {
   const updateMatch = message.match(/Updating pack[:\s]+(.+)/i);
   const removeMatch = message.match(/Removing pack[:\s]+(.+)/i);
   const completeMatch = message.match(/Completed pack[:\s]+(.+)/i);
-  const match = installMatch
-    ? installMatch
-    : updateMatch
-      ? updateMatch
-      : removeMatch
-        ? removeMatch
-        : null;
+  const match = installMatch || updateMatch || removeMatch || null;
 
   if (match !== null) {
     const packName = match[1].trim();
@@ -794,7 +742,7 @@ function updatePackStatusFromMessage(message: string) {
   }
 }
 
-function getStatusText(status) {
+function getStatusText(status: OperationStatus | undefined): string {
   switch (status) {
     case 'pending':
       return 'Pending';
@@ -809,7 +757,7 @@ function getStatusText(status) {
   }
 }
 
-function getActionIcon(action) {
+function getActionIcon(action: string | undefined): string {
   switch (action) {
     case 'install':
       return '⬇️';
@@ -819,6 +767,91 @@ function getActionIcon(action) {
       return '🗑️';
     default:
       return '';
+  }
+}
+
+// Style helper functions to replace nested ternaries in template
+function getPackCardBackground(status: OperationStatus | undefined): string {
+  switch (status) {
+    case 'running':
+      return 'linear-gradient(135deg, #f0f5ff 0%, #ffffff 100%)';
+    case 'complete':
+      return 'linear-gradient(135deg, #f0fdf4 0%, #ffffff 100%)';
+    case 'failed':
+      return 'linear-gradient(135deg, #fff5f5 0%, #ffffff 100%)';
+    case 'pending':
+      return '#fafbfc';
+    default:
+      return 'white';
+  }
+}
+
+function getPackCardBorderLeft(status: OperationStatus | undefined): string {
+  switch (status) {
+    case 'running':
+      return '4px solid #3366cc';
+    case 'complete':
+      return '4px solid #14866d';
+    case 'failed':
+      return '4px solid #d33';
+    case 'pending':
+      return '4px solid #c8ccd1';
+    default:
+      return '2px solid #eaecf0';
+  }
+}
+
+function getOperationStatusBackground(status: OperationStatus | undefined): string {
+  switch (status) {
+    case 'pending':
+      return 'linear-gradient(135deg, #f8f9fa 0%, #eaecf0 100%)';
+    case 'running':
+      return 'linear-gradient(135deg, #3366cc 0%, #447ff5 100%)';
+    case 'complete':
+      return 'linear-gradient(135deg, #14866d 0%, #00af89 100%)';
+    case 'failed':
+      return 'linear-gradient(135deg, #d33 0%, #ff4444 100%)';
+    default:
+      return 'linear-gradient(135deg, #f8f9fa 0%, #eaecf0 100%)';
+  }
+}
+
+function getActionBadgeBackground(action: string | undefined): string {
+  switch (action) {
+    case 'install':
+      return 'linear-gradient(135deg, #d5fdf0 0%, #e8fff8 100%)';
+    case 'update':
+      return 'linear-gradient(135deg, #fff4e5 0%, #fff8ed 100%)';
+    case 'remove':
+      return 'linear-gradient(135deg, #fee7e6 0%, #fff0ef 100%)';
+    default:
+      return '#f8f9fa';
+  }
+}
+
+function getActionBadgeColor(action: string | undefined): string {
+  switch (action) {
+    case 'install':
+      return '#14866d';
+    case 'update':
+      return '#ac6600';
+    case 'remove':
+      return '#d33';
+    default:
+      return '#54595d';
+  }
+}
+
+function getActionBadgeBorder(action: string | undefined): string {
+  switch (action) {
+    case 'install':
+      return '1px solid #7fd4bf';
+    case 'update':
+      return '1px solid #f0c77e';
+    case 'remove':
+      return '1px solid #faa';
+    default:
+      return '1px solid #c8ccd1';
   }
 }
 

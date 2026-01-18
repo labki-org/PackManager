@@ -146,11 +146,11 @@
     "LabkiContentSources": {
       "value": [
         {
-          "url": "https://github.com/Aharoni-Lab/labki-packs",
+          "url": "https://github.com/labki-org/labki-packs",
           "ref": ["main", "v1.0.0"]
         },        
         {
-          "url": "https://github.com/Aharoni-Lab/labki-base-packs"
+          "url": "https://github.com/labki-org/labki-base-packs"
         }
       ],
       "description": "Array of content repositories with optional Git ref (branch, tag, or commit)."
