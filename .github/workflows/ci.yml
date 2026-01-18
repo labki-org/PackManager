@@ -80,25 +80,24 @@ jobs:
         run: sleep 10
 
       - name: Check schema SQL freshness
-        working-directory: /var/www/html
         run: |
           # Regenerate schemas from abstract definition
-          php maintenance/run.php generateSchemaSql \
-            --json=extensions/LabkiPackManager/sql/tables.json \
-            --sql=extensions/LabkiPackManager/sql/mysql/tables-generated.sql \
+          php /var/www/html/maintenance/run.php generateSchemaSql \
+            --json=$GITHUB_WORKSPACE/sql/tables.json \
+            --sql=$GITHUB_WORKSPACE/sql/mysql/tables-generated.sql \
             --type=mysql
-          php maintenance/run.php generateSchemaSql \
-            --json=extensions/LabkiPackManager/sql/tables.json \
-            --sql=extensions/LabkiPackManager/sql/sqlite/tables-generated.sql \
+          php /var/www/html/maintenance/run.php generateSchemaSql \
+            --json=$GITHUB_WORKSPACE/sql/tables.json \
+            --sql=$GITHUB_WORKSPACE/sql/sqlite/tables-generated.sql \
             --type=sqlite
 
           # Normalize source path comment (line 2) for consistent comparison
           # The absolute path differs between local dev and CI environments
-          cd extensions/LabkiPackManager
-          sed -i '2s|Source: .*sql/tables.json|Source: sql/tables.json|' sql/mysql/tables-generated.sql
-          sed -i '2s|Source: .*sql/tables.json|Source: sql/tables.json|' sql/sqlite/tables-generated.sql
+          sed -i '2s|Source: .*sql/tables.json|Source: sql/tables.json|' $GITHUB_WORKSPACE/sql/mysql/tables-generated.sql
+          sed -i '2s|Source: .*sql/tables.json|Source: sql/tables.json|' $GITHUB_WORKSPACE/sql/sqlite/tables-generated.sql
 
-          # Check if generated files differ from committed versions
+          # Check if generated files differ from committed versions (run from repo root)
+          cd $GITHUB_WORKSPACE
           if ! git diff --quiet -- sql/mysql/tables-generated.sql sql/sqlite/tables-generated.sql; then
             echo "::error ::Generated SQL schemas are out of date with tables.json"
             echo "::error ::Please run './maintenance/regenerateSchema.sh' and commit the changes."
