@@ -56,8 +56,7 @@ final class SetPackActionHandler extends BasePackHandler {
 		}
 
 		// Verify pack exists in manifest
-		$manifestData = $manifest['manifest'] ?? $manifest;
-		$manifestPacks = $manifestData['packs'] ?? [];
+		$manifestPacks = $this->getManifestPacks( $manifest );
 		if ( !isset( $manifestPacks[$packName] ) ) {
 			throw new \InvalidArgumentException( "SetPackActionHandler: pack '{$packName}' not found in manifest" );
 		}

@@ -24,6 +24,17 @@ abstract class BasePackHandler implements PackCommandHandler {
 	}
 
 	/**
+	 * Extract packs array from manifest, handling both wrapped and unwrapped formats.
+	 *
+	 * @param array $manifest Manifest data (may be wrapped in 'manifest' key)
+	 * @return array Packs array keyed by pack name
+	 */
+	protected function getManifestPacks( array $manifest ): array {
+		$manifestData = $manifest['manifest'] ?? $manifest;
+		return $manifestData['packs'] ?? [];
+	}
+
+	/**
 	 * Build fresh pack state from manifest and installed packs.
 	 * Common logic for InitHandler and ClearHandler.
 	 *
@@ -56,8 +67,7 @@ abstract class BasePackHandler implements PackCommandHandler {
 		wfDebugLog( 'labkipack', "buildFreshState: Installed packs: " . json_encode( array_keys( $installedMap ) ) );
 
 		// Build pack states from manifest
-		$manifestData = $manifest['manifest'] ?? $manifest;
-		$manifestPacks = $manifestData['packs'] ?? [];
+		$manifestPacks = $this->getManifestPacks( $manifest );
 		wfDebugLog( 'labkipack', "buildFreshState: Manifest packs: " . json_encode( array_keys( $manifestPacks ) ) );
 		
 		$packs = [];
@@ -143,10 +153,9 @@ abstract class BasePackHandler implements PackCommandHandler {
 		PackSessionState $state, 
 		array $manifest, 
 		string $packName, 
-		string $action 
+		string $action
 	): void {
-		$manifestData = $manifest['manifest'] ?? $manifest;
-		$manifestPacks = $manifestData['packs'] ?? [];
+		$manifestPacks = $this->getManifestPacks( $manifest );
 
 		// Get dependencies for this pack
 		$dependencies = $manifestPacks[$packName]['depends_on'] ?? [];
@@ -200,9 +209,8 @@ abstract class BasePackHandler implements PackCommandHandler {
 	 * @return array Array of dependent pack names
 	 */
 	protected function findPacksDependingOn( PackSessionState $state, array $manifest, string $packName ): array {
-		$manifestData = $manifest['manifest'] ?? $manifest;
-		$manifestPacks = $manifestData['packs'] ?? [];
-		
+		$manifestPacks = $this->getManifestPacks( $manifest );
+
 		$dependents = [];
 		foreach ( $state->getPacksWithActions() as $actionedPack ) {
 			if ( $actionedPack === $packName ) {
@@ -228,9 +236,8 @@ abstract class BasePackHandler implements PackCommandHandler {
 	 * @return array Array of dependent pack names
 	 */
 	protected function findInstalledPacksDependingOn( PackSessionState $state, array $manifest, string $packName ): array {
-		$manifestData = $manifest['manifest'] ?? $manifest;
-		$manifestPacks = $manifestData['packs'] ?? [];
-		
+		$manifestPacks = $this->getManifestPacks( $manifest );
+
 		$dependents = [];
 		foreach ( $state->packs() as $otherPackName => $otherPackState ) {
 			if ( $otherPackName === $packName ) {
@@ -271,10 +278,9 @@ abstract class BasePackHandler implements PackCommandHandler {
 	protected function propagateRemovalToDependencies( 
 		PackSessionState $state, 
 		array $manifest, 
-		string $packName 
+		string $packName
 	): void {
-		$manifestData = $manifest['manifest'] ?? $manifest;
-		$manifestPacks = $manifestData['packs'] ?? [];
+		$manifestPacks = $this->getManifestPacks( $manifest );
 
 		// Find all packs that depend on this pack
 		foreach ( $manifestPacks as $otherPackName => $otherPackDef ) {
@@ -322,8 +328,7 @@ abstract class BasePackHandler implements PackCommandHandler {
 	 * @param array $manifest
 	 */
 	protected function clearUnneededAutoActions( PackSessionState $state, array $manifest ): void {
-		$manifestData = $manifest['manifest'] ?? $manifest;
-		$manifestPacks = $manifestData['packs'] ?? [];
+		$manifestPacks = $this->getManifestPacks( $manifest );
 
 		// Get all manually actioned packs
 		$manualPacks = $state->getManuallyActionedPackNames();
