@@ -12,6 +12,7 @@ concurrency:
 
 jobs:
   build:
+    name: Frontend Build & Tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -36,70 +37,64 @@ jobs:
             resources/modules/ext.LabkiPackManager/app.bundle.js
             resources/modules/ext.LabkiPackManager/app.bundle.js.map
 
-  phpunit:
+  integration-test:
+    name: PHPUnit Tests
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        mw_branch: [REL1_44]
-        php: ['8.2']
+
+    services:
+      db:
+        image: mariadb:10.11
+        env:
+          MARIADB_DATABASE: labki
+          MARIADB_USER: labki
+          MARIADB_PASSWORD: labki_pass
+          MARIADB_ROOT_PASSWORD: root_pass
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+
+    container:
+      image: ghcr.io/labki-org/labki-platform:latest-dev
+      env:
+        MW_DB_HOST: db
+        MW_DB_NAME: labki
+        MW_DB_USER: labki
+        MW_DB_PASSWORD: labki_pass
+        MW_ADMIN_USER: Admin
+        MW_ADMIN_PASS: testpass
+        MW_SKIP_EXTERNAL_DEPENDENCIES: 1
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
         with:
-          path: extension
+          path: extensions/LabkiPackManager
 
-      - name: Get MediaWiki core
-        run: |
-          git clone https://gerrit.wikimedia.org/r/mediawiki/core.git mediawiki
-          cd mediawiki
-          git checkout ${{ matrix.mw_branch }}
-
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: ${{ matrix.php }}
-          extensions: mbstring, intl, xml, json, sqlite3
-          tools: composer
-
-      - name: Install MW deps
-        working-directory: mediawiki
-        run: composer update --no-interaction
-
-      - name: Install MW with SQLite
-        working-directory: mediawiki
-        run: |
-          mkdir -p cache/sqlite
-          php maintenance/install.php \
-            --dbtype sqlite --dbpath $(pwd)/cache/sqlite \
-            --server "http://example.local" --scriptpath "/w" \
-            --lang en --pass StrongDockerPass123! Wiki Admin
-
-      - name: Enable extension
-        run: |
-          mkdir -p mediawiki/extensions
-          ln -s "$(pwd)/extension" "mediawiki/extensions/LabkiPackManager"
-          echo "wfLoadExtension( 'LabkiPackManager' );" >> mediawiki/LocalSettings.php
-          echo "\$wgCacheDirectory = \"\$IP/cache\";" >> mediawiki/LocalSettings.php
-
+      - name: Wait for database
+        run: sleep 10
 
       - name: Check schema SQL freshness
-        working-directory: mediawiki
         run: |
           # Regenerate schemas from abstract definition
-          php maintenance/run.php generateSchemaSql \
+          php /var/www/html/maintenance/run.php generateSchemaSql \
             --json=extensions/LabkiPackManager/sql/tables.json \
             --sql=extensions/LabkiPackManager/sql/mysql/tables-generated.sql \
             --type=mysql
-          php maintenance/run.php generateSchemaSql \
+          php /var/www/html/maintenance/run.php generateSchemaSql \
             --json=extensions/LabkiPackManager/sql/tables.json \
             --sql=extensions/LabkiPackManager/sql/sqlite/tables-generated.sql \
             --type=sqlite
-          
+
           # Normalize source path comment (line 2) for consistent comparison
           # The absolute path differs between local dev and CI environments
           cd extensions/LabkiPackManager
           sed -i '2s|Source: .*sql/tables.json|Source: sql/tables.json|' sql/mysql/tables-generated.sql
           sed -i '2s|Source: .*sql/tables.json|Source: sql/tables.json|' sql/sqlite/tables-generated.sql
-          
+
           # Check if generated files differ from committed versions
           if ! git diff --quiet -- sql/mysql/tables-generated.sql sql/sqlite/tables-generated.sql; then
             echo "::error ::Generated SQL schemas are out of date with tables.json"
@@ -107,33 +102,18 @@ jobs:
             git diff sql/mysql/tables-generated.sql sql/sqlite/tables-generated.sql
             exit 1
           fi
-          echo "✓ Schema SQL files are up to date"
+          echo "Schema SQL files are up to date"
 
-      - name: Update DB schema
-        working-directory: mediawiki
-        run: php maintenance/update.php --quick
-
-      - name: Verify labki tables
-        working-directory: mediawiki
+      - name: PHPUnit unit tests
         run: |
-          php maintenance/sql.php --query="SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'labki_%';"
+          composer phpunit -- \
+            --configuration extensions/LabkiPackManager/tests/phpunit/suite.xml \
+            --testsuite unit \
+            --testdox
 
-      - name: PHPUnit unit
-        working-directory: mediawiki
+      - name: PHPUnit integration tests
         run: |
-          if [ -d "extensions/LabkiPackManager/tests/phpunit/unit" ]; then
-            composer phpunit:entrypoint -- extensions/LabkiPackManager/tests/phpunit/unit
-          else
-            echo "No unit tests directory found; skipping."
-          fi
-
-      - name: PHPUnit integration
-        working-directory: mediawiki
-        env:
-          PHPUNIT_WIKI: wiki
-        run: |
-          if [ -d "extensions/LabkiPackManager/tests/phpunit/integration" ]; then
-            composer phpunit:entrypoint -- extensions/LabkiPackManager/tests/phpunit/integration
-          else
-            echo "No integration tests directory found; skipping."
-          fi
+          composer phpunit -- \
+            --configuration extensions/LabkiPackManager/tests/phpunit/suite.xml \
+            --testsuite integration \
+            --testdox
