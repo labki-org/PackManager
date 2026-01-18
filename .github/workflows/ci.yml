@@ -71,20 +71,23 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          path: extensions/LabkiPackManager
+
+      - name: Link extension to MediaWiki
+        run: |
+          ln -s "$GITHUB_WORKSPACE" /var/www/html/extensions/LabkiPackManager
 
       - name: Wait for database
         run: sleep 10
 
       - name: Check schema SQL freshness
+        working-directory: /var/www/html
         run: |
           # Regenerate schemas from abstract definition
-          php /var/www/html/maintenance/run.php generateSchemaSql \
+          php maintenance/run.php generateSchemaSql \
             --json=extensions/LabkiPackManager/sql/tables.json \
             --sql=extensions/LabkiPackManager/sql/mysql/tables-generated.sql \
             --type=mysql
-          php /var/www/html/maintenance/run.php generateSchemaSql \
+          php maintenance/run.php generateSchemaSql \
             --json=extensions/LabkiPackManager/sql/tables.json \
             --sql=extensions/LabkiPackManager/sql/sqlite/tables-generated.sql \
             --type=sqlite
@@ -105,15 +108,15 @@ jobs:
           echo "Schema SQL files are up to date"
 
       - name: PHPUnit unit tests
+        working-directory: /var/www/html
         run: |
-          composer phpunit -- \
-            --configuration extensions/LabkiPackManager/tests/phpunit/suite.xml \
-            --testsuite unit \
+          composer phpunit:entrypoint -- \
+            extensions/LabkiPackManager/tests/phpunit/unit \
             --testdox
 
       - name: PHPUnit integration tests
+        working-directory: /var/www/html
         run: |
-          composer phpunit -- \
-            --configuration extensions/LabkiPackManager/tests/phpunit/suite.xml \
-            --testsuite integration \
+          composer phpunit:entrypoint -- \
+            extensions/LabkiPackManager/tests/phpunit/integration \
             --testdox
