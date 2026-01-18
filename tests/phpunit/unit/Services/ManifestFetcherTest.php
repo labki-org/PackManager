@@ -185,12 +185,17 @@ final class ManifestFetcherTest extends TestCase {
      * @covers ::fetch
      */
     public function testFetch_WhenManifestUnreadable_ReturnsFatal(): void {
+        // Skip when running as root (root can read any file regardless of permissions)
+        if (function_exists('posix_getuid') && posix_getuid() === 0) {
+            $this->markTestSkipped('Cannot test file permission denial when running as root');
+        }
+
         $repoUrl = 'https://github.com/example/repo';
         $ref = 'main';
 
         $worktreePath = $this->createMockWorktree($repoUrl, $ref, 'valid content');
         $manifestPath = $worktreePath . '/manifest.yml';
-        
+
         // Remove read permissions
         chmod($manifestPath, 0000);
 
