@@ -133,10 +133,17 @@ jobs:
       - name: Wait for database
         run: sleep 10
 
+      - name: Initialize MediaWiki
+        working-directory: /var/www/html
+        run: |
+          # Run the labki-platform initialization
+          /opt/labki/scripts/wait-for-db.sh
+          /opt/labki/scripts/init-wiki.sh
+
       - name: PHPUnit unit tests
         working-directory: /var/www/html
         run: |
-          composer phpunit:entrypoint -- \
+          composer phpunit -- \
             --configuration extensions/LabkiPackManager/tests/phpunit/suite.xml \
             --testsuite unit \
             --testdox
@@ -144,7 +151,7 @@ jobs:
       - name: PHPUnit integration tests
         working-directory: /var/www/html
         run: |
-          composer phpunit:entrypoint -- \
+          composer phpunit -- \
             --configuration extensions/LabkiPackManager/tests/phpunit/suite.xml \
             --testsuite integration \
             --testdox
