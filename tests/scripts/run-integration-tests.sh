@@ -14,7 +14,7 @@ if ! docker compose ps wiki 2>/dev/null | grep -q "Up"; then
     exit 1
 fi
 
-# Run PHPUnit inside container
-docker compose exec -T wiki php /var/www/html/tests/phpunit/phpunit.php \
+# Run PHPUnit inside container using vendor/bin/phpunit (available in dev image)
+docker compose exec -T wiki /var/www/html/vendor/bin/phpunit \
     --configuration /mw-user-extensions/LabkiPackManager/tests/phpunit/suite.xml \
     "$@"

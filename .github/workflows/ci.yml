@@ -12,6 +12,7 @@ concurrency:
 
 jobs:
   build:
+    name: Frontend Build & Tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -36,12 +37,9 @@ jobs:
             resources/modules/ext.LabkiPackManager/app.bundle.js
             resources/modules/ext.LabkiPackManager/app.bundle.js.map
 
-  phpunit:
+  schema-check:
+    name: Schema SQL Freshness
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        mw_branch: [REL1_44]
-        php: ['8.2']
     steps:
       - uses: actions/checkout@v4
         with:
@@ -49,37 +47,22 @@ jobs:
 
       - name: Get MediaWiki core
         run: |
-          git clone https://gerrit.wikimedia.org/r/mediawiki/core.git mediawiki
-          cd mediawiki
-          git checkout ${{ matrix.mw_branch }}
+          git clone -b REL1_44 --depth 1 https://gerrit.wikimedia.org/r/mediawiki/core.git mediawiki
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: ${{ matrix.php }}
-          extensions: mbstring, intl, xml, json, sqlite3
+          php-version: '8.2'
+          extensions: mbstring, intl, xml, json
           tools: composer
 
       - name: Install MW deps
         working-directory: mediawiki
         run: composer update --no-interaction
 
-      - name: Install MW with SQLite
-        working-directory: mediawiki
+      - name: Link extension
         run: |
-          mkdir -p cache/sqlite
-          php maintenance/install.php \
-            --dbtype sqlite --dbpath $(pwd)/cache/sqlite \
-            --server "http://example.local" --scriptpath "/w" \
-            --lang en --pass StrongDockerPass123! Wiki Admin
-
-      - name: Enable extension
-        run: |
-          mkdir -p mediawiki/extensions
           ln -s "$(pwd)/extension" "mediawiki/extensions/LabkiPackManager"
-          echo "wfLoadExtension( 'LabkiPackManager' );" >> mediawiki/LocalSettings.php
-          echo "\$wgCacheDirectory = \"\$IP/cache\";" >> mediawiki/LocalSettings.php
-
 
       - name: Check schema SQL freshness
         working-directory: mediawiki
@@ -93,13 +76,12 @@ jobs:
             --json=extensions/LabkiPackManager/sql/tables.json \
             --sql=extensions/LabkiPackManager/sql/sqlite/tables-generated.sql \
             --type=sqlite
-          
+
           # Normalize source path comment (line 2) for consistent comparison
-          # The absolute path differs between local dev and CI environments
           cd extensions/LabkiPackManager
           sed -i '2s|Source: .*sql/tables.json|Source: sql/tables.json|' sql/mysql/tables-generated.sql
           sed -i '2s|Source: .*sql/tables.json|Source: sql/tables.json|' sql/sqlite/tables-generated.sql
-          
+
           # Check if generated files differ from committed versions
           if ! git diff --quiet -- sql/mysql/tables-generated.sql sql/sqlite/tables-generated.sql; then
             echo "::error ::Generated SQL schemas are out of date with tables.json"
@@ -109,31 +91,123 @@ jobs:
           fi
           echo "✓ Schema SQL files are up to date"
 
-      - name: Update DB schema
-        working-directory: mediawiki
-        run: php maintenance/update.php --quick
+  phpunit:
+    name: PHPUnit Tests
+    runs-on: ubuntu-latest
 
-      - name: Verify labki tables
-        working-directory: mediawiki
-        run: |
-          php maintenance/sql.php --query="SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'labki_%';"
-
-      - name: PHPUnit unit
-        working-directory: mediawiki
-        run: |
-          if [ -d "extensions/LabkiPackManager/tests/phpunit/unit" ]; then
-            composer phpunit:entrypoint -- extensions/LabkiPackManager/tests/phpunit/unit
-          else
-            echo "No unit tests directory found; skipping."
-          fi
-
-      - name: PHPUnit integration
-        working-directory: mediawiki
+    services:
+      db:
+        image: mariadb:10.11
         env:
-          PHPUNIT_WIKI: wiki
+          MARIADB_DATABASE: labki
+          MARIADB_USER: labki
+          MARIADB_PASSWORD: labki_pass
+          MARIADB_ROOT_PASSWORD: root_pass
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+
+    container:
+      image: ghcr.io/labki-org/labki-platform:latest-dev
+      env:
+        MW_DB_HOST: db
+        MW_DB_NAME: labki
+        MW_DB_USER: labki
+        MW_DB_PASSWORD: labki_pass
+        MW_ADMIN_USER: Admin
+        MW_ADMIN_PASS: CITestPassword123!
+        MW_DISABLE_PLATFORM_EXTENSIONS: 1
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          path: extensions/LabkiPackManager
+
+      - name: Wait for database
+        run: sleep 10
+
+      - name: Link extension to MediaWiki
         run: |
-          if [ -d "extensions/LabkiPackManager/tests/phpunit/integration" ]; then
-            composer phpunit:entrypoint -- extensions/LabkiPackManager/tests/phpunit/integration
+          # Link to /mw-user-extensions (matches LocalSettings.test.php path)
+          mkdir -p /mw-user-extensions
+          rm -rf /mw-user-extensions/LabkiPackManager
+          ln -s $GITHUB_WORKSPACE/extensions/LabkiPackManager /mw-user-extensions/LabkiPackManager
+          # Also link to standard extensions dir for discovery
+          rm -rf /var/www/html/extensions/LabkiPackManager
+          ln -s $GITHUB_WORKSPACE/extensions/LabkiPackManager /var/www/html/extensions/LabkiPackManager
+
+      - name: Install MediaWiki database
+        working-directory: /var/www/html
+        run: |
+          # Run install.php first (before LocalSettings.php exists) to create tables
+          rm -f LocalSettings.php
+          php maintenance/install.php \
+            --dbserver="$MW_DB_HOST" \
+            --dbname="$MW_DB_NAME" \
+            --dbuser="$MW_DB_USER" \
+            --dbpass="$MW_DB_PASSWORD" \
+            --pass="$MW_ADMIN_PASS" \
+            --scriptpath="" \
+            "LabkiPackManagerTest" \
+            "$MW_ADMIN_USER"
+
+      - name: Setup LocalSettings with bootstrap
+        working-directory: /var/www/html
+        run: |
+          mkdir -p /mw-config
+          cp $GITHUB_WORKSPACE/extensions/LabkiPackManager/tests/LocalSettings.test.php /mw-config/LocalSettings.user.php
+
+          # Find the bootstrap.php location in the image
+          BOOTSTRAP_PATH=""
+          for path in /opt/labki/mediawiki/bootstrap.php /var/www/html/mediawiki/bootstrap.php /mw-config/bootstrap.php; do
+            if [ -f "$path" ]; then
+              BOOTSTRAP_PATH="$path"
+              break
+            fi
+          done
+
+          if [ -n "$BOOTSTRAP_PATH" ]; then
+            echo "Using labki-platform bootstrap at: $BOOTSTRAP_PATH"
+            # Replace LocalSettings.php with bootstrap-based config
+            printf '%s\n' "<?php" > LocalSettings.php
+            printf '%s\n' "# LocalSettings.php - Generated for CI testing" >> LocalSettings.php
+            printf '%s\n' "if (!defined('MEDIAWIKI')) { exit; }" >> LocalSettings.php
+            printf '%s\n' "require_once '$BOOTSTRAP_PATH';" >> LocalSettings.php
           else
-            echo "No integration tests directory found; skipping."
+            echo "No bootstrap found, adding user settings include..."
+            # Add user settings include to existing LocalSettings.php
+            printf '\n%s\n' "# Load custom test settings" >> LocalSettings.php
+            printf '%s\n' "if (file_exists('/mw-config/LocalSettings.user.php')) {" >> LocalSettings.php
+            printf '%s\n' "    require_once '/mw-config/LocalSettings.user.php';" >> LocalSettings.php
+            printf '%s\n' "}" >> LocalSettings.php
           fi
+
+          # Show configuration for debugging
+          echo "=== LocalSettings.php ==="
+          cat LocalSettings.php
+
+      - name: Update database schema
+        working-directory: /var/www/html
+        run: |
+          php maintenance/update.php --quick
+
+      - name: PHPUnit unit tests
+        working-directory: /var/www/html
+        run: |
+          composer phpunit -- \
+            --configuration extensions/LabkiPackManager/tests/phpunit/suite.xml \
+            --testsuite unit \
+            --testdox
+
+      - name: PHPUnit integration tests
+        working-directory: /var/www/html
+        run: |
+          composer phpunit -- \
+            --configuration extensions/LabkiPackManager/tests/phpunit/suite.xml \
+            --testsuite integration \
+            --testdox
