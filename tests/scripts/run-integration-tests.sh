@@ -8,7 +8,7 @@ REPO_ROOT="$(dirname "$(dirname "$SCRIPT_DIR")")"
 cd "$REPO_ROOT"
 
 # Check if Docker is running
-if ! docker compose ps wiki 2>/dev/null | grep -q "running"; then
+if ! docker compose ps wiki 2>/dev/null | grep -q "Up"; then
     echo "ERROR: Docker wiki container is not running."
     echo "Run ./tests/scripts/reinstall_test_env.sh first."
     exit 1

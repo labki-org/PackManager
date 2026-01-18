@@ -1,6 +1,3 @@
-[![codecov](https://codecov.io/gh/Aharoni-Lab/LabkiPackManager/branch/main/graph/badge.svg)](https://codecov.io/gh/Aharoni-Lab/LabkiPackManager)
-
-
 LabkiPackManager
 ================
 
