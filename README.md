@@ -1,6 +1,3 @@
-[![codecov](https://codecov.io/gh/Aharoni-Lab/LabkiPackManager/branch/main/graph/badge.svg)](https://codecov.io/gh/Aharoni-Lab/LabkiPackManager)
-
-
 LabkiPackManager
 ================
 
@@ -26,42 +23,37 @@ git clone https://github.com/Aharoni-Lab/LabkiPackManager.git LabkiPackManager
 wfLoadExtension( 'LabkiPackManager' );
 ```
 
-Quick setup/reset (Docker + SQLite)
------------------------------------
+Quick setup/reset (Docker)
+--------------------------
 
-If you are developing locally with MediaWiki-Docker, use the bundled script to install or fully reset a working test wiki in one shot (clone MW if needed, mount this extension, install Mermaid, enable both, run updater):
+This extension uses docker-compose with the labki-platform image for local development:
 
 ```bash
-# from your host shell (WSL/macOS/Linux), not inside the container
-cd ~/dev/LabkiPackManager
-chmod +x setup_mw_test_env.sh
-./setup_mw_test_env.sh
+# Start fresh environment (or reset existing one)
+./tests/scripts/reinstall_test_env.sh
 ```
-
-**Notes:**
-- Docker needs to be running
-- MediaWiki will be cloned to a platform-appropriate cache directory:
-  - Linux: `~/.cache/labki/mediawiki-test`
-  - macOS: `~/Library/Caches/labki/mediawiki-test`
-  - Windows: `~\AppData\Local\labki\mediawiki-test`
-- You can override with: `MW_DIR=/custom/path ./setup_mw_test_env.sh`
 
 Then:
 
-- Open `http://localhost:8080/w` to use the wiki
-- Run unit tests:
-cd into the mediawiki directory then
-  ```bash
-  docker compose exec mediawiki bash -lc 'composer phpunit:entrypoint -- extensions/LabkiPackManager/tests/phpunit/unit'
-  ```
-- Run integration tests:
-  ```bash
-  docker compose exec mediawiki bash -lc 'composer phpunit:entrypoint -- extensions/LabkiPackManager/tests/phpunit/integration'
-  ```
+- Open http://localhost:8891 to use the wiki
+- Login with Admin / dockerpass
 
-**Additional notes:**
-- Do not run the script with sudo. If you see permission errors, fix ownership on the cache directory.
-- The script mirrors the CI flow (SQLite), and is idempotent — safe to re-run when things get out of sync.
+Run tests:
+```bash
+# Integration tests (requires running environment)
+./tests/scripts/run-integration-tests.sh
+
+# Unit tests only
+./tests/scripts/run-integration-tests.sh --testsuite unit
+```
+
+Useful commands:
+```bash
+docker compose logs -f wiki          # Follow wiki logs
+docker compose logs -f jobrunner     # Follow jobrunner logs
+docker compose exec wiki bash        # Shell into wiki container
+docker compose down -v               # Stop and remove all data
+```
 
 3. Configure content sources (raw file hosts):
 
@@ -146,26 +138,20 @@ Development
 - Special page: `Special:LabkiPackManager`
 - Strings and aliases: `i18n/`
 
-Run PHPUnit and PHPCS via MediaWiki’s composer setup in the MediaWiki root.
+Testing
+-------
 
-Unit tests
-----------
+Use the docker-compose environment (see Quick setup above):
 
-Local Composer (inside MediaWiki environment):
 ```bash
-cd extensions/LabkiPackManager
-composer install --no-dev --prefer-dist --no-progress --no-interaction
-composer install --dev --no-progress --no-interaction
-composer test
-```
+# Run all tests (unit + integration)
+./tests/scripts/run-integration-tests.sh
 
-Docker (Composer image, inside MediaWiki environment):
-```powershell
-# Install deps (including dev)
-docker run --rm -v "C:\Users\dbaha\Documents\Projects\LabkiPackManager:/app" -w /app composer:2 install --prefer-dist --no-progress --no-interaction
+# Run only unit tests
+./tests/scripts/run-integration-tests.sh --testsuite unit
 
-# Run tests
-docker run --rm -v "C:\Users\dbaha\Documents\Projects\LabkiPackManager:/app" -w /app composer:2 vendor/bin/phpunit -c phpunit.xml.dist
+# Run only integration tests
+./tests/scripts/run-integration-tests.sh --testsuite integration
 ```
 
 ### Backend Development
@@ -213,10 +199,6 @@ composer run fix
 MediaWiki core is installed in `vendor/mediawiki/core/` as a dev dependency, giving your IDE complete understanding of all MediaWiki classes and functions (e.g., `Title`, `User`, `ApiBase`, `wfMessage()`, etc.).
 
 This is better than manual stubs and is the recommended approach for MediaWiki extension development.
-
-### Backend Testing
-
-This runs PHPUnit against the pure PHP parser located at `includes/Parser/ManifestParser.php`.
 
 Labki content repo expectations
 -------------------------------
