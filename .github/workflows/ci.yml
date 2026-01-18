@@ -138,7 +138,7 @@ jobs:
         run: |
           # Run the labki-platform initialization
           /opt/labki/scripts/wait-for-db.sh
-          /opt/labki/scripts/init-wiki.sh
+          /opt/labki/scripts/install-mediawiki.sh
 
       - name: PHPUnit unit tests
         working-directory: /var/www/html
