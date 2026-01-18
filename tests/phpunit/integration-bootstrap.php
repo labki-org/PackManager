@@ -7,8 +7,8 @@
  * It loads MediaWiki's test bootstrap which provides access to the full MW
  * environment including database and all services.
  *
- * Usage: Run from within Docker container:
- *   php /var/www/html/tests/phpunit/phpunit.php \
+ * Usage: Run from within Docker container (using labki-platform:latest-dev image):
+ *   /var/www/html/vendor/bin/phpunit \
  *       --configuration /mw-user-extensions/LabkiPackManager/tests/phpunit/suite.xml
  */
 

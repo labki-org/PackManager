@@ -7,9 +7,9 @@ CREATE TABLE /*_*/labki_content_repo (
   content_repo_url VARCHAR(255) NOT NULL,
   default_ref VARCHAR(100) DEFAULT 'main',
   bare_path VARCHAR(500) DEFAULT NULL,
-  last_fetched INTEGER UNSIGNED DEFAULT NULL,
-  created_at INTEGER UNSIGNED NOT NULL,
-  updated_at INTEGER UNSIGNED NOT NULL
+  last_fetched BLOB DEFAULT NULL,
+  created_at BLOB NOT NULL,
+  updated_at BLOB NOT NULL
 );
 
 CREATE UNIQUE INDEX content_repo_url_unique ON /*_*/labki_content_repo (content_repo_url);
@@ -26,10 +26,10 @@ CREATE TABLE /*_*/labki_content_ref (
   content_ref_name VARCHAR(255) DEFAULT NULL,
   last_commit VARCHAR(40) DEFAULT NULL,
   manifest_hash VARCHAR(64) DEFAULT NULL,
-  manifest_last_parsed INTEGER UNSIGNED DEFAULT NULL,
+  manifest_last_parsed BLOB DEFAULT NULL,
   worktree_path VARCHAR(500) DEFAULT NULL,
-  created_at INTEGER UNSIGNED NOT NULL,
-  updated_at INTEGER UNSIGNED NOT NULL
+  created_at BLOB NOT NULL,
+  updated_at BLOB NOT NULL
 );
 
 CREATE UNIQUE INDEX content_repo_ref_unique ON /*_*/labki_content_ref (content_repo_id, source_ref);
@@ -51,9 +51,9 @@ CREATE TABLE /*_*/labki_pack (
   name VARCHAR(255) NOT NULL,
   version VARCHAR(50) DEFAULT NULL,
   source_commit VARCHAR(40) DEFAULT NULL,
-  installed_at INTEGER UNSIGNED DEFAULT NULL,
+  installed_at BLOB DEFAULT NULL,
   installed_by INTEGER UNSIGNED DEFAULT NULL,
-  updated_at INTEGER UNSIGNED DEFAULT NULL,
+  updated_at BLOB DEFAULT NULL,
   STATUS VARCHAR(20) DEFAULT 'installed'
 );
 
@@ -71,8 +71,8 @@ CREATE TABLE /*_*/labki_page (
   wiki_page_id INTEGER UNSIGNED DEFAULT NULL,
   last_rev_id INTEGER UNSIGNED DEFAULT NULL,
   content_hash VARCHAR(64) DEFAULT NULL,
-  created_at INTEGER UNSIGNED DEFAULT NULL,
-  updated_at INTEGER UNSIGNED DEFAULT NULL
+  created_at BLOB DEFAULT NULL,
+  updated_at BLOB DEFAULT NULL
 );
 
 CREATE UNIQUE INDEX pack_name_unique ON /*_*/labki_page (pack_id, name);
@@ -89,7 +89,7 @@ CREATE INDEX idx_labki_page_wiki_page_id ON /*_*/labki_page (wiki_page_id);
 CREATE TABLE /*_*/labki_pack_dependency (
   pack_id INTEGER UNSIGNED NOT NULL,
   depends_on_pack_id INTEGER UNSIGNED NOT NULL,
-  created_at INTEGER UNSIGNED NOT NULL,
+  created_at BLOB NOT NULL,
   PRIMARY KEY(pack_id, depends_on_pack_id)
 );
 
@@ -104,9 +104,9 @@ CREATE TABLE /*_*/labki_operations (
   message VARCHAR(500) DEFAULT '',
   result_data BLOB DEFAULT NULL,
   user_id INTEGER UNSIGNED DEFAULT 0,
-  created_at INTEGER UNSIGNED NOT NULL,
-  started_at INTEGER UNSIGNED DEFAULT NULL,
-  updated_at INTEGER UNSIGNED NOT NULL,
+  created_at BLOB NOT NULL,
+  started_at BLOB DEFAULT NULL,
+  updated_at BLOB NOT NULL,
   PRIMARY KEY(operation_id)
 );
 

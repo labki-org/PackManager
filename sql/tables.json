@@ -24,18 +24,18 @@
 			},
 			{
 				"name": "last_fetched",
-				"type": "integer",
-				"options": { "notnull": false, "unsigned": true }
+				"type": "mwtimestamp",
+				"options": { "notnull": false }
 			},
 			{
 				"name": "created_at",
-				"type": "integer",
-				"options": { "notnull": true, "unsigned": true }
+				"type": "mwtimestamp",
+				"options": { "notnull": true }
 			},
 			{
 				"name": "updated_at",
-				"type": "integer",
-				"options": { "notnull": true, "unsigned": true }
+				"type": "mwtimestamp",
+				"options": { "notnull": true }
 			}
 		],
 		"indexes": [
@@ -92,8 +92,8 @@
 			},
 			{
 				"name": "manifest_last_parsed",
-				"type": "integer",
-				"options": { "notnull": false, "unsigned": true }
+				"type": "mwtimestamp",
+				"options": { "notnull": false }
 			},
 			{
 				"name": "worktree_path",
@@ -102,13 +102,13 @@
 			},
 			{
 				"name": "created_at",
-				"type": "integer",
-				"options": { "notnull": true, "unsigned": true }
+				"type": "mwtimestamp",
+				"options": { "notnull": true }
 			},
 			{
 				"name": "updated_at",
-				"type": "integer",
-				"options": { "notnull": true, "unsigned": true }
+				"type": "mwtimestamp",
+				"options": { "notnull": true }
 			}
 		],
 		"indexes": [
@@ -175,8 +175,8 @@
 			},
 			{
 				"name": "installed_at",
-				"type": "integer",
-				"options": { "notnull": false, "unsigned": true }
+				"type": "mwtimestamp",
+				"options": { "notnull": false }
 			},
 			{
 				"name": "installed_by",
@@ -185,8 +185,8 @@
 			},
 			{
 				"name": "updated_at",
-				"type": "integer",
-				"options": { "notnull": false, "unsigned": true }
+				"type": "mwtimestamp",
+				"options": { "notnull": false }
 			},
 			{
 				"name": "status",
@@ -253,13 +253,13 @@
 			},
 			{
 				"name": "created_at",
-				"type": "integer",
-				"options": { "notnull": false, "unsigned": true }
+				"type": "mwtimestamp",
+				"options": { "notnull": false }
 			},
 			{
 				"name": "updated_at",
-				"type": "integer",
-				"options": { "notnull": false, "unsigned": true }
+				"type": "mwtimestamp",
+				"options": { "notnull": false }
 			}
 		],
 		"indexes": [
@@ -306,8 +306,8 @@
 			},
 			{
 				"name": "created_at",
-				"type": "integer",
-				"options": { "notnull": true, "unsigned": true }
+				"type": "mwtimestamp",
+				"options": { "notnull": true }
 			}
 		],
 		"indexes": [
@@ -359,18 +359,18 @@
 			},
 			{
 				"name": "created_at",
-				"type": "integer",
-				"options": { "notnull": true, "unsigned": true }
+				"type": "mwtimestamp",
+				"options": { "notnull": true }
 			},
 			{
 				"name": "started_at",
-				"type": "integer",
-				"options": { "notnull": false, "unsigned": true }
+				"type": "mwtimestamp",
+				"options": { "notnull": false }
 			},
 			{
 				"name": "updated_at",
-				"type": "integer",
-				"options": { "notnull": true, "unsigned": true }
+				"type": "mwtimestamp",
+				"options": { "notnull": true }
 			}
 		],
 		"indexes": [
